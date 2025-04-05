@@ -10,16 +10,22 @@
 .settings/
 */.settings/
 
-*/Drivers
-*/Middlewares
+# 일반 IDE 관련
+.settings/
+.cproject
+.project
 
+# Mac, Windows OS별 숨김파일
+.DS_Store
+Thumbs.db
 
 # STM32CubeIDE project metadata
 *.launch
-*.settings/
-*.project
-*.cproject
 *.log
+*.elf
+*.bin
+*.hex
+*.map
 
 # OS-specific
 .DS_Store
