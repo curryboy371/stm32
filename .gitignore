@@ -12,8 +12,7 @@
 
 # 일반 IDE 관련
 .settings/
-.cproject
-.project
+
 
 # Mac, Windows OS별 숨김파일
 .DS_Store
