@@ -724,6 +724,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  TIM11_1ms_counter++;
 	  TIM11_keypad_scan_timer++;
 
+	  if(bmp_timer > 0) {
+		  --bmp_timer;
+	  }
+
 	  // todo thread로 분리
 	  if(TIM11_keypad_scan_timer >= KEYPAD_SCAN_TIME) {
 

@@ -24,6 +24,8 @@ uint8_t press_wait_time[MAX_OSS] = { 5, 7, 15, 26 }; // 4.5, 7.5 13.5 25.5 ms
 t_I2C_settings I2C_setting;
 
 
+volatile uint32_t bmp_timer;
+
 void bmp180_init() {
 
 	HAL_Delay(100);
@@ -64,6 +66,7 @@ void bmp180_init() {
 
 	BMP_info.oss = 0; //
 
+	BMP_info.step = BMP_TEMP;
 
 	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
@@ -178,9 +181,23 @@ void bmp180_make_calib_table(uint8_t calib_datas[]) {
 t_I2C_COMM_state bmp180_read_temperature() {
 
 	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+	if(bmp_timer > 0) {
+		return state;
+	}
+
+	if(bmp180_wait() == FALSE) {
+		return bmp180_tx_temperature();
+	}
+}
+
+t_I2C_COMM_state bmp180_tx_temperature() {
+
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+	if(bmp_timer > 0) {
+		return state;
+	}
 
 	BMP_state = BMP_STATE_READ_TEMPERATURE;
-
 
 	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, CTRL_MEAS);
 	if(state != I2C_COMM_STATE_OK) {
@@ -193,7 +210,26 @@ t_I2C_COMM_state bmp180_read_temperature() {
 	}
 
 	// 4.5ms wait
-	HAL_Delay(5);
+	bmp_timer = 5;
+	//HAL_Delay(5);
+	BMP_state = BMP_STATE_READ_TEMPERATURE_WAIT;
+
+	return state;
+}
+
+t_I2C_COMM_state bmp180_rx_temperature() {
+
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+
+	if(BMP_state != BMP_STATE_READ_TEMPERATURE_WAIT) {
+		return state;
+	}
+
+	if(bmp_timer > 0) {
+		return state;
+	}
+
+	BMP_state = BMP_STATE_READ_TEMPERATURE_RECV;
 
 	uint8_t output_datas[2] = {0};
 
@@ -226,13 +262,36 @@ t_I2C_COMM_state bmp180_read_temperature() {
 
 	long temperature = calc_temperature(uncomp_temperature);
 
-	printf("ut:%ld t:%ld.%d \r\n", uncomp_temperature, (long)(temperature / 10), temperature % 10);
+
+	BMP_info.temper = (long)temperature / 10;
+	BMP_info.temper_f = temperature % 10;
+	BMP_info.step = BMP_PRRESS;
+	printf("ut:%ld t:%ld.%d \r\n", uncomp_temperature, BMP_info.temper, BMP_info.temper_f);
 	return state;
+
 }
 
 t_I2C_COMM_state bmp180_read_pressure() {
 
 	t_I2C_COMM_state state  = I2C_COMM_STATE_OK;
+
+	if(bmp_timer > 0) {
+		return state;
+	}
+
+	if(bmp180_wait() == FALSE) {
+		return bmp180_tx_pressure();
+	}
+}
+
+t_I2C_COMM_state bmp180_tx_pressure() {
+
+	t_I2C_COMM_state state  = I2C_COMM_STATE_OK;
+
+	if(bmp_timer > 0) {
+		return state;
+	}
+
 
 	BMP_state = BMP_STATE_READ_PRESSURE;
 
@@ -247,7 +306,26 @@ t_I2C_COMM_state bmp180_read_pressure() {
 	}
 
 	// wait
-	HAL_Delay(press_wait_time[BMP_info.oss]);
+	bmp_timer = press_wait_time[BMP_info.oss];
+	//HAL_Delay();
+	BMP_state = BMP_STATE_READ_PRESSURE_WAIT;
+
+	return state;
+
+}
+
+t_I2C_COMM_state bmp180_rx_pressure() {
+
+	t_I2C_COMM_state state  = I2C_COMM_STATE_OK;
+
+	if(BMP_state != BMP_STATE_READ_PRESSURE_WAIT) {
+		return state;
+	}
+
+	if(bmp_timer > 0) {
+		return state;
+	}
+	BMP_state = BMP_STATE_READ_PRESSURE_RECV;
 
 	uint8_t output_datas[3] = {0};
 
@@ -294,9 +372,12 @@ t_I2C_COMM_state bmp180_read_pressure() {
 
 	// xlsb는 oss의 단계에 따라 상위 비트만 사용
 	long uncomp_pressure = output_datas[BMP_MSB] << 16 | output_datas[BMP_LSB] << 8 | output_datas[BMP_XLSB] >> (8 - BMP_info.oss);
-
 	long pressure = calc_pressure(uncomp_pressure);
-	printf("up:%ld p:%ld \r\n", uncomp_pressure, (long)pressure / 100);
+
+	BMP_info.step = BMP_TEMP;
+	BMP_info.pressure = (long)pressure / 100;
+	BMP_info.pressure_f = pressure % 100;
+	printf("up:%ld p:%ld.%d \r\n", uncomp_pressure, BMP_info.pressure, BMP_info.pressure_f);
 
 	return state;
 
@@ -318,6 +399,7 @@ long calc_temperature(long ut) {
 
 	return t;
 }
+
 
 long calc_pressure(long up) {
 
@@ -383,16 +465,32 @@ void bmp180_run() {
 	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 	while(true) {
 
+
+		state = bmp180_rx_temperature();
+		if(state != I2C_COMM_STATE_OK) {
+			bmp180_print_msg("rx temp err", state);
+		}
+
+		state = bmp180_rx_pressure();
+		if(state != I2C_COMM_STATE_OK) {
+			bmp180_print_msg("rx press err", state);
+		}
+
+
 		if(TIM11_1ms_counter > 1500) {
 			TIM11_1ms_counter = 0;
 
-			state = bmp180_read_temperature();
-			if(state != I2C_COMM_STATE_OK) {
-				bmp180_print_msg("read temp err", state);
+			if(BMP_info.step == BMP_TEMP) {
+				state = bmp180_read_temperature();
+				if(state != I2C_COMM_STATE_OK) {
+					bmp180_print_msg("read temp err", state);
+				}
 			}
-			state = bmp180_read_pressure();
-			if(state != I2C_COMM_STATE_OK) {
-				bmp180_print_msg("read press err", state);
+			else {
+				state = bmp180_read_pressure();
+				if(state != I2C_COMM_STATE_OK) {
+					bmp180_print_msg("read press err", state);
+				}
 			}
 		}
 	}
@@ -644,6 +742,11 @@ void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode) {
 #endif
 
 
+}
+
+uint8_t bmp180_wait() {
+
+	return (BMP_state == BMP_STATE_READ_TEMPERATURE_WAIT ||  BMP_state == BMP_STATE_READ_TEMPERATURE_WAIT);
 }
 
 

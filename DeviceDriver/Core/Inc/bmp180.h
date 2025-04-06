@@ -48,14 +48,21 @@
 #define I2C_ACK		0
 #define I2C_NACK	1
 
+#define BMP_TEMP 	0
+#define BMP_PRRESS	1
+
+
 typedef enum BMP180_comm_state {
 
 	BMP_STATE_IDLE,
 	BMP_STATE_SCAN,
-
 	BMP_STATE_READ_TABLE,
 	BMP_STATE_READ_TEMPERATURE,
 	BMP_STATE_READ_PRESSURE,
+	BMP_STATE_READ_TEMPERATURE_WAIT,
+	BMP_STATE_READ_PRESSURE_WAIT,
+	BMP_STATE_READ_TEMPERATURE_RECV,
+	BMP_STATE_READ_PRESSURE_RECV,
 
 }t_BMP180_commu_state;
 
@@ -82,6 +89,13 @@ typedef struct BMP180_info {
 	 uint8_t oss;
 	 long B5; 			// 온도 보정 공식 중간 값 ( 압력 계산시 필요)
 
+	 long temper;
+	 uint8_t temper_f;
+	 long pressure;
+	 uint8_t pressure_f;
+
+	 uint8_t step;
+
 }t_BMP180_info;
 
 void bmp180_init();
@@ -90,7 +104,12 @@ t_I2C_COMM_state bmp180_read_calib_table();
 void bmp180_make_calib_table(uint8_t calib_datas[]);
 
 t_I2C_COMM_state bmp180_read_temperature();
+t_I2C_COMM_state bmp180_tx_temperature();
+t_I2C_COMM_state bmp180_rx_temperature();
+
 t_I2C_COMM_state bmp180_read_pressure();
+t_I2C_COMM_state bmp180_tx_pressure();
+t_I2C_COMM_state bmp180_rx_pressure();
 
 long calc_temperature(long ut);
 long calc_pressure(long up);
@@ -110,5 +129,6 @@ void bmp180_ackm(uint8_t in_ackm);
 void bmp180_clock();
 void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode);
 
+uint8_t bmp180_wait();
 
 #endif /* INC_BMP180_H_ */
