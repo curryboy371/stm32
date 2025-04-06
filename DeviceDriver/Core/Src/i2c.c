@@ -159,10 +159,7 @@ t_I2C_COMM_state I2C_scan(t_I2C_settings* pI2C_setting, uint8_t addr) {
 
 	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
-	state = I2C_start(pI2C_setting);
-	if(state != I2C_COMM_STATE_OK) {
-		return state;
-	}
+	I2C_start(pI2C_setting);
 
 	state = I2C_transmit_byte(pI2C_setting, addr);
 	if(state != I2C_COMM_STATE_OK) {
@@ -171,13 +168,133 @@ t_I2C_COMM_state I2C_scan(t_I2C_settings* pI2C_setting, uint8_t addr) {
 		return state;
 	}
 
-
-	state = I2C_stop(pI2C_setting);
+	state = I2C_ack_slave(pI2C_setting);
 	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
 		return state;
 	}
 
+	I2C_stop(pI2C_setting);
+
 	printf("find address %x\r\n", addr);
+	return state;
+
+}
+
+
+// receive와 ackm을 한번에 수행하는 함수
+// read는 이미 연결된 상태
+t_I2C_COMM_state I2C_read(t_I2C_settings* pI2C_setting, uint8_t* out_rx_data, uint8_t ack_setting, t_I2C_command command) {
+
+	if(!pI2C_setting) {
+		return I2C_COMM_STATE_ERROR;
+	}
+
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+
+	// read는 start 안해도 됨
+	// command 무시
+	if(command & I2C_START) {
+		//I2C_start(pI2C_setting);
+	}
+
+	state = I2C_receive_byte(pI2C_setting, out_rx_data);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	state = I2C_ack_master(pI2C_setting, ack_setting);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	if(command & I2C_STOP) {
+		I2C_stop(pI2C_setting);
+	}
+
+	return state;
+}
+
+
+// transmit과 acks을 한번에 수행하는 함수
+t_I2C_COMM_state I2C_write(t_I2C_settings* pI2C_setting, uint8_t tx_data, t_I2C_command command) {
+
+	if(!pI2C_setting) {
+		return I2C_COMM_STATE_ERROR;
+	}
+
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+
+	// start
+	if(command & I2C_START) {
+		I2C_start(pI2C_setting);
+	}
+
+	state = I2C_transmit_byte(pI2C_setting, tx_data);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	state = I2C_ack_slave(pI2C_setting);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	if(command & I2C_STOP) {
+		I2C_stop(pI2C_setting);
+	}
+
+	return state;
+}
+
+// I2C addr의 register add까지 read 후 빠져나옴
+// 정상적인 상황시 통신이 완전히 종료되지 않은 상황에서 빠져나오므로 주의!
+t_I2C_COMM_state I2C_connect_register(t_I2C_settings* pI2C_setting, uint8_t addr, uint8_t reg_addr) {
+
+	if(!pI2C_setting) {
+		return I2C_COMM_STATE_ERROR;
+	}
+
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
+
+	// start
+	I2C_start(pI2C_setting);
+
+
+	// slave write 전송
+	state = I2C_transmit_byte(pI2C_setting, addr);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	// acks
+	state = I2C_ack_slave(pI2C_setting);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	// register address 전송
+	state = I2C_transmit_byte(pI2C_setting, reg_addr);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	// acks
+	state = I2C_ack_slave(pI2C_setting);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	// 정상적인 종료시 register까지 연결하고 빠져나옴
+	// 아직 연결 중인 상태임을 명시
 	return state;
 
 }
@@ -185,24 +302,57 @@ t_I2C_COMM_state I2C_scan(t_I2C_settings* pI2C_setting, uint8_t addr) {
 // I2C addr의 register에서 out_data로 데이터를 data_len개 읽어오는 함수
 t_I2C_COMM_state I2C_read_register(t_I2C_settings* pI2C_setting, uint8_t addr, uint8_t* out_data, uint32_t data_len) {
 
+	if(!pI2C_setting) {
+		return I2C_COMM_STATE_ERROR;
+	}
 
-}
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
-// I2C addr에 pdata를 data length만큼 write하는 함수
-t_I2C_COMM_state I2C_write(t_I2C_settings* pI2C_setting, uint8_t addr, const uint8_t* pdata, uint32_t data_len) {
+	// start
+	I2C_start(pI2C_setting);
 
+	// slave read 전송
+	state = I2C_transmit_byte(pI2C_setting, addr);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
 
+	// acks
+	state = I2C_ack_slave(pI2C_setting);
+	if(state != I2C_COMM_STATE_OK) {
+		I2C_stop(pI2C_setting);
+		return state;
+	}
+
+	// burst 방식으로 한번에 받아옴
+	for(int i = 0; i < data_len; ++i) {
+
+		state = I2C_receive_byte(pI2C_setting, out_data);
+		if(state != I2C_COMM_STATE_OK) {
+			I2C_stop(pI2C_setting);
+			return state;
+		}
+
+		state = I2C_ack_master(pI2C_setting, pI2C_setting->ack);
+		if(state != I2C_COMM_STATE_OK) {
+			I2C_stop(pI2C_setting);
+			return state;
+		}
+
+		++out_data;
+	}
+
+	I2C_stop(pI2C_setting);
+
+	return state;
 }
 
 
 // I2C start signal
 // 기기별로 시그널이 달라서 구분이 필요할 수도 있음
 // 그 경우에는 type을 추가하여 조건문 처리하도록 하자
-t_I2C_COMM_state I2C_start(t_I2C_settings* pI2C_setting) {
-
-	if(!pI2C_setting) {
-		return I2C_COMM_STATE_ERROR;
-	}
+void I2C_start(t_I2C_settings* pI2C_setting) {
 
 	pI2C_setting->comm_step = I2C_COMM_STEP_START;
 
@@ -222,16 +372,15 @@ t_I2C_COMM_state I2C_start(t_I2C_settings* pI2C_setting) {
 	// SCL이 상승에서 데이터를 받도록 클럭은 하강 상태에서 시작
     I2C_set_gpio_odr(pI2C_scl, LOW);
 
-	return I2C_COMM_STATE_OK;
 }
 
 // I2C start stop signal
 // 기기별로 시그널이 달라서 구분이 필요할 수도 있음
 // 그 경우에는 type을 추가하여 조건문 처리하도록 하자
-t_I2C_COMM_state I2C_stop(t_I2C_settings* pI2C_setting) {
+void I2C_stop(t_I2C_settings* pI2C_setting) {
 
 	if(!pI2C_setting) {
-		return I2C_COMM_STATE_ERROR;
+		return;
 	}
 
 	pI2C_setting->comm_step = I2C_COMM_STEP_STOP;
@@ -251,7 +400,6 @@ t_I2C_COMM_state I2C_stop(t_I2C_settings* pI2C_setting) {
     I2C_set_gpio_odr(pI2C_scl, HIGH);
     I2C_set_gpio_odr(pI2C_sda, HIGH);
 
-	return I2C_COMM_STATE_OK;
 }
 
 t_I2C_COMM_state I2C_transmit_byte(t_I2C_settings* pI2C_setting, uint8_t tx_data) {

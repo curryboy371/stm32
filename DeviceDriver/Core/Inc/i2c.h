@@ -44,6 +44,13 @@ typedef enum {
     I2C_LSB_FIRST   // LSB부터 전송
 } I2C_bit_order;
 
+typedef enum {
+	I2C_NONE = 0x00,  							// none start, stop
+    I2C_START = 0x01,  							// only start
+	I2C_STOP = 0x02,  							// only stop
+    I2C_START_AND_STOP = I2C_START | I2C_STOP   	// start and stop
+} t_I2C_command;
+
 
 typedef enum I2C_sampling_type {
 
@@ -114,19 +121,19 @@ uint8_t I2C_get_pin_num(uint16_t gpio_pin);
 
 
 
-//void I2CScan(BBI2C *pI2C, unsigned char *pMap);
 t_I2C_COMM_state I2C_scan(t_I2C_settings* pI2C_setting, uint8_t addr);
 
+t_I2C_COMM_state I2C_read(t_I2C_settings* pI2C_setting, uint8_t* out_rx_data, uint8_t ack_setting, t_I2C_command command);
+t_I2C_COMM_state I2C_write(t_I2C_settings* pI2C_setting, uint8_t tx_data, t_I2C_command command);
 
-//int I2CRead(BBI2C *pI2C, uint8_t iAddr, uint8_t *pData, int iLen);
-void I2C_read();
-
+t_I2C_COMM_state I2C_connect_register(t_I2C_settings* pI2C_setting, uint8_t addr, uint8_t reg_addr);
 t_I2C_COMM_state I2C_read_register(t_I2C_settings* pI2C_setting, uint8_t addr, uint8_t* out_data, uint32_t data_len);
 
-t_I2C_COMM_state I2C_write(t_I2C_settings* pI2C_setting, uint8_t addr, const uint8_t* pdata, uint32_t data_len);
 
-t_I2C_COMM_state I2C_start(t_I2C_settings* pI2C_setting);
-t_I2C_COMM_state I2C_stop(t_I2C_settings* pI2C_setting);
+
+void I2C_start(t_I2C_settings* pI2C_setting);
+void I2C_stop(t_I2C_settings* pI2C_setting);
+
 
 
 t_I2C_COMM_state I2C_transmit_byte(t_I2C_settings* pI2C_setting, uint8_t tx_data);

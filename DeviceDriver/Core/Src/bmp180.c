@@ -17,7 +17,6 @@ t_BMP180_calib_table calib_table_info;
 
 t_BMP180_info BMP_info;
 
-t_BMP180_commu_step BMP_step;
 t_BMP180_commu_state BMP_state;
 
 uint8_t press_wait_time[MAX_OSS] = { 5, 7, 15, 26 }; // 4.5, 7.5 13.5 25.5 ms
@@ -26,6 +25,9 @@ t_I2C_settings I2C_setting;
 
 
 void bmp180_init() {
+
+	HAL_Delay(100);
+
 
 #if ACCESS_MODE == USE_DMA
 
@@ -58,26 +60,43 @@ void bmp180_init() {
 	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, SET);
 #endif
 
-
-	BMP_step = BMP_STEP_WAIT;
 	BMP_state = BMP_STATE_IDLE;
-
-
-
 
 	BMP_info.oss = 0; //
 
-	bmp180_scan();
 
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
+	for(int i = 0; i < BMP_RETRY_COUNT; ++i) {
 
-	bmp180_read_calib_table();
+		BMP_state = BMP_STATE_SCAN;
+		state = I2C_scan(&I2C_setting, BMP_ADDR_W);
+		if(state == I2C_COMM_STATE_OK){
+			break;
+		}
 
+		bmp180_print_msg("scan err", state);
+
+		printf("retry scan %d\r\n", i+1);
+		HAL_Delay(10);
+	}
+
+	for(int i = 0; i < BMP_RETRY_COUNT; ++i) {
+
+		state = bmp180_read_calib_table();
+		if(state == I2C_COMM_STATE_OK){
+			break;
+		}
+
+		bmp180_print_msg("read calib err", state);
+		printf("retry read calib table %d\r\n", i+1);
+		HAL_Delay(10);
+	}
 }
 
 
-t_commu_state bmp180_scan() {
-	printf("scan\r\n");
+t_I2C_COMM_state bmp180_scan() {
+
 	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 	BMP_state = BMP_STATE_SCAN;
 
@@ -104,77 +123,39 @@ t_commu_state bmp180_scan() {
 	return commu_state;
 #endif
 
-	printf("finish scan \r\n");
-
+	return state;
 }
 
 
-t_commu_state bmp180_read_calib_table() {
+t_I2C_COMM_state bmp180_read_calib_table() {
 
-	t_commu_state commu_state = COMMU_OK;
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
 	BMP_state = BMP_STATE_READ_TABLE;
 
-
-	// calib reg start address
-	uint8_t reg_addr = 0xAA;
-
-	// start
-	bmp180_start();
-
-	// slave write 전송
-	commu_state = bmp180_tx(BMP_ADDR_W);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	// calib talbe regster와 connect
+	// 연속적 데이터이므로 시작주소와 연결 후 한번에 받음
+	uint8_t reg_addr = 0xAA; // calib reg start address
+	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, reg_addr);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-	// register address 전송
-	commu_state = bmp180_tx(reg_addr);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	// calib table data 한번에 받기
+	uint8_t calib_datas[BMP_CALIB_LEN*2] = {0};
+	state = I2C_read_register(&I2C_setting, BMP_ADDR_R, calib_datas, BMP_CALIB_LEN*2);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-	// restart
-	bmp180_start();
-
-	// slave read 전송
-	commu_state = bmp180_tx(BMP_ADDR_R);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
-	}
-
-
-
-	// burst 방식으로 한번에 받아옴
-	uint8_t calib_datas[22] = {0};
-	for(int i = 0; i < 22; ++i) {
-
-		commu_state = bmp180_rx(&calib_datas[i], I2C_ACK);
-		if(commu_state != COMMU_OK) {
-			printf("timeout\r\n");
-			bmp180_stop();
-			return commu_state;
-		}
-	}
-
-
-	bmp180_stop();
 
 	// make data
 	bmp180_make_calib_table(calib_datas);
 
 
-	return commu_state;
+	return state;
 }
 
 void bmp180_make_calib_table(uint8_t calib_datas[]) {
-
 
     int16_t* table[] = {
         &calib_table_info.AC1, &calib_table_info.AC2, &calib_table_info.AC3,
@@ -191,259 +172,137 @@ void bmp180_make_calib_table(uint8_t calib_datas[]) {
         *table[i] = (int16_t)(calib_datas[2 * i] << 8 | calib_datas[2 * i + 1]);
     }
 
-
-/*	calib_table_info.AC1 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.AC2 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.AC3 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.AC4 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.AC5 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.AC6 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.B1 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.B2 = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.MB = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.MC = calib_datas[idx++] << 8 | calib_datas[idx++];
-	calib_table_info.MD = calib_datas[idx++] << 8 | calib_datas[idx++];*/
-
+    printf("make clib table\r\n");
 }
 
-t_commu_state bmp180_read_temperature() {
+t_I2C_COMM_state bmp180_read_temperature() {
 
-	t_commu_state commu_state = COMMU_OK;
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
-
-	BMP_state = BMP_STATE_READ_PRESSURE;
-
-
-	// start
-	bmp180_start();
+	BMP_state = BMP_STATE_READ_TEMPERATURE;
 
 
-	// slave write 전송
-	commu_state = bmp180_tx(BMP_ADDR_W);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, CTRL_MEAS);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-	// 0x2e write into reg 0xf4
-
-	// write reg address
-	commu_state = bmp180_tx(CTRL_MEAS);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_write(&I2C_setting, 0x2e, I2C_STOP);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-	// write 0x2e (
-	commu_state = bmp180_tx(0x2e);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
-	}
-
-	bmp180_stop();
-
 
 	// 4.5ms wait
 	HAL_Delay(5);
 
-	// start
-	bmp180_start();
-
-	// slave write 전송
-	commu_state = bmp180_tx(BMP_ADDR_W);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
-	}
-
-	// read reg MSB, LSB
 	uint8_t output_datas[2] = {0};
-	commu_state = bmp180_tx(OUT_MSB);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+
+	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, OUT_MSB);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-	// restart
-	bmp180_start();
 
 	// slave read 전송
-	commu_state = bmp180_tx(BMP_ADDR_R);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_write(&I2C_setting, BMP_ADDR_R, I2C_START);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-
-
-	// msb, lsb read
-	// ack, nack로 master 응답
-	commu_state = bmp180_rx(&output_datas[BMP_MSB], I2C_ACK);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	// temper의 msb, lsb을 read
+	// 마지막 read에서는 nack을 ackm으로 응답해야함
+	state = I2C_read(&I2C_setting, &output_datas[BMP_MSB], I2C_setting.ack, I2C_NONE);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-	commu_state = bmp180_rx(&output_datas[BMP_LSB], I2C_NACK);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	// 마지막 data read 후 내부에서 stop
+	state = I2C_read(&I2C_setting, &output_datas[BMP_LSB], !I2C_setting.ack, I2C_STOP);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-	bmp180_stop();
-
 
 	uint16_t uncomp_temperature = output_datas[BMP_MSB] << 8 | output_datas[BMP_LSB];
 
 	long temperature = calc_temperature(uncomp_temperature);
 
 	printf("ut:%ld t:%ld.%d \r\n", uncomp_temperature, (long)(temperature / 10), temperature % 10);
-	return commu_state;
+	return state;
 }
 
+t_I2C_COMM_state bmp180_read_pressure() {
 
-t_commu_state bmp180_read_pressure() {
-
-	t_commu_state commu_state = COMMU_OK;
-
+	t_I2C_COMM_state state  = I2C_COMM_STATE_OK;
 
 	BMP_state = BMP_STATE_READ_PRESSURE;
 
-
-	// start
-	bmp180_start();
-
-
-	// slave write 전송
-	commu_state = bmp180_tx(BMP_ADDR_W);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, CTRL_MEAS);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-	// 0x2e write into reg 0xf4
-
-
-	// write reg address
-	commu_state = bmp180_tx(CTRL_MEAS);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_write(&I2C_setting, 0x34 | BMP_info.oss << 6, I2C_STOP);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-	// write 0x34 + oss << 6
-	commu_state = bmp180_tx(0x34 | BMP_info.oss << 6);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
-	}
-
-	bmp180_stop();
-
 
 	// wait
 	HAL_Delay(press_wait_time[BMP_info.oss]);
 
-	// start
-	bmp180_start();
+	uint8_t output_datas[3] = {0};
 
-	// slave write 전송
-	commu_state = bmp180_tx(BMP_ADDR_W);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_connect_register(&I2C_setting, BMP_ADDR_W, OUT_MSB);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-	// read reg MSB, LSB
-	uint8_t output_datas[BMP_MAX_SB] = {0};
-	commu_state = bmp180_tx(OUT_MSB);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
-	}
-
-	// restart
-	bmp180_start();
 
 	// slave read 전송
-	commu_state = bmp180_tx(BMP_ADDR_R);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	state = I2C_write(&I2C_setting, BMP_ADDR_R, I2C_START);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
 
-
-
-	// msb, lsb read
-	// ack, nack로 master 응답
-	commu_state = bmp180_rx(&output_datas[BMP_MSB], I2C_ACK);
-	if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-		return commu_state;
+	// temper의 msb, lsb을 read
+	// 마지막 read에서는 nack을 ackm으로 응답해야함
+	state = I2C_read(&I2C_setting, &output_datas[BMP_MSB], I2C_setting.ack, I2C_NONE);
+	if(state != I2C_COMM_STATE_OK) {
+		return state;
 	}
-
-
-
 
 	if(BMP_info.oss == 0) {
 
-		// oss 0은 msb lsb만 사용
-		commu_state = bmp180_rx(&output_datas[BMP_LSB], I2C_NACK);
-		if(commu_state != COMMU_OK) {
-			bmp180_stop();
-			printf("timeout\r\n");
-			return commu_state;
+		// 마지막 data read 후 내부에서 stop
+		state = I2C_read(&I2C_setting, &output_datas[BMP_LSB], !I2C_setting.ack, I2C_STOP);
+		if(state != I2C_COMM_STATE_OK) {
+			return state;
 		}
 	}
 	else {
 		// oss 1부터는 xlsb 사용
-		commu_state = bmp180_rx(&output_datas[BMP_LSB], I2C_ACK);
-		if(commu_state != COMMU_OK) {
-			bmp180_stop();
-			printf("timeout\r\n");
-			return commu_state;
+		state = I2C_read(&I2C_setting, &output_datas[BMP_LSB], I2C_setting.ack, I2C_NONE);
+		if(state != I2C_COMM_STATE_OK) {
+			return state;
 		}
 
-		commu_state = bmp180_rx(&output_datas[BMP_XLSB], I2C_NACK);
-		if(commu_state != COMMU_OK) {
-			bmp180_stop();
-			printf("timeout\r\n");
-			return commu_state;
+		// 마지막 data read 후 내부에서 stop
+		state = I2C_read(&I2C_setting, &output_datas[BMP_XLSB], !I2C_setting.ack, I2C_STOP);
+		if(state != I2C_COMM_STATE_OK) {
+			return state;
 		}
 	}
 
-	bmp180_stop();
-
 
 	// xlsb는 oss의 단계에 따라 상위 비트만 사용
-
 	long uncomp_pressure = output_datas[BMP_MSB] << 16 | output_datas[BMP_LSB] << 8 | output_datas[BMP_XLSB] >> (8 - BMP_info.oss);
 
 	long pressure = calc_pressure(uncomp_pressure);
-	printf("up:%ld p:%ld.%ld \r\n", uncomp_pressure, pressure);
+	printf("up:%ld p:%ld \r\n", uncomp_pressure, (long)pressure / 100);
 
-	return commu_state;
+	return state;
 
 }
 
 long calc_temperature(long ut) {
-
 
 	// X1 = ( UT - AC6) * AC5 / 2^15
 	long x1 = (ut- calib_table_info.AC6) * calib_table_info.AC5 / (1 << 15);
@@ -521,23 +380,26 @@ long calc_pressure(long up) {
 
 void bmp180_run() {
 
-
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 	while(true) {
 
 		if(TIM11_1ms_counter > 1500) {
 			TIM11_1ms_counter = 0;
 
-			bmp180_read_temperature();
-			bmp180_read_pressure();
-
+			state = bmp180_read_temperature();
+			if(state != I2C_COMM_STATE_OK) {
+				bmp180_print_msg("read temp err", state);
+			}
+			state = bmp180_read_pressure();
+			if(state != I2C_COMM_STATE_OK) {
+				bmp180_print_msg("read press err", state);
+			}
 		}
 	}
 }
 
 
 void bmp180_start() {
-
-	BMP_step = BMP_STEP_START;
 
 #if ACCESS_MODE == USE_DMA
 	I2C_start(&I2C_setting);
@@ -563,8 +425,6 @@ void bmp180_start() {
 
 void bmp180_stop() {
 
-	BMP_step = BMP_STEP_STOP;
-
 #if ACCESS_MODE == USE_DMA
 	I2C_stop(&I2C_setting);
 
@@ -583,8 +443,11 @@ void bmp180_stop() {
 #endif
 
 
+}
 
+void bmp180_print_msg(const char* msg, t_I2C_COMM_state res_state) {
 
+	printf("%d %s bmp:%d i2c:%d\r\n", res_state, msg, BMP_state, I2C_setting.comm_step);
 }
 
 t_I2C_COMM_state bmp180_tx(uint8_t value) {
@@ -626,6 +489,7 @@ t_I2C_COMM_state bmp180_tx(uint8_t value) {
 	return bmp180_acks();
 #endif
 
+	return comm_state;
 
 }
 
@@ -674,7 +538,7 @@ t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm) {
 #endif
 
 
-	return I2C_COMM_STATE_OK;
+	return comm_state;
 }
 
 // ack of slave

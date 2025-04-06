@@ -40,7 +40,10 @@
 
 #define BMP_MAX_SB 	3
 
-#define MAX_OSS		4
+#define MAX_OSS			4
+#define BMP_CALIB_LEN 	11
+#define BMP_RETRY_COUNT	5
+
 
 #define I2C_ACK		0
 #define I2C_NACK	1
@@ -55,20 +58,6 @@ typedef enum BMP180_comm_state {
 	BMP_STATE_READ_PRESSURE,
 
 }t_BMP180_commu_state;
-
-typedef enum BMP180_comm_step {
-
-
-	BMP_STEP_WAIT,
-	BMP_STEP_START,
-	BMP_STEP_RESTART,
-	BMP_STEP_TX,
-	BMP_STEP_RX,
-	BMP_STEP_STOP,
-
-
-}t_BMP180_commu_step;
-
 
 typedef struct BMP180_calib_table {
 
@@ -96,20 +85,21 @@ typedef struct BMP180_info {
 }t_BMP180_info;
 
 void bmp180_init();
-t_commu_state bmp180_scan();
-t_commu_state bmp180_read_calib_table();
+t_I2C_COMM_state bmp180_scan();
+t_I2C_COMM_state bmp180_read_calib_table();
 void bmp180_make_calib_table(uint8_t calib_datas[]);
 
-t_commu_state bmp180_read_temperature();
-t_commu_state bmp180_read_pressure();
+t_I2C_COMM_state bmp180_read_temperature();
+t_I2C_COMM_state bmp180_read_pressure();
 
 long calc_temperature(long ut);
 long calc_pressure(long up);
 
 void bmp180_run();
-
 void bmp180_start();
 void bmp180_stop();
+
+void bmp180_print_msg(const char* msg, t_I2C_COMM_state res_state);
 
 t_I2C_COMM_state bmp180_tx(uint8_t value);
 t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm);
@@ -117,9 +107,7 @@ t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm);
 t_I2C_COMM_state bmp180_acks();
 
 void bmp180_ackm(uint8_t in_ackm);
-
 void bmp180_clock();
-
 void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode);
 
 
