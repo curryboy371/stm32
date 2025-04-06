@@ -51,6 +51,7 @@
 #define BMP_TEMP 	0
 #define BMP_PRRESS	1
 
+#define TESTTTT 1
 
 typedef enum BMP180_comm_state {
 
