@@ -53,6 +53,7 @@
 
 #define TESTTTT 1
 #define TESTTTT 2
+#define TESTTTT 3
 
 
 typedef enum BMP180_comm_state {
