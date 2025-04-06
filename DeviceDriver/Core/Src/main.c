@@ -168,13 +168,14 @@ int main(void)
 
 
 
-  button_init();
-  keypadInit();
+//  button_init();
+//  keypadInit();
 
-  bmp180_init();
+  //bmp180_init();
 
 
-  bmp180_run();
+  //bmp180_run();
+  lcd1602_main();
   //run_animation();
   //button_init();
 

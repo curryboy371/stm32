@@ -29,8 +29,8 @@
 
 
 #define BMP_SCL_PORT	GPIOA
-#define BMP_SDA_PORT	GPIOB
-#define BMP_SDA_PIN 	GPIO_PIN_4
+#define BMP_SDA_PORT	GPIOA
+#define BMP_SDA_PIN 	GPIO_PIN_7
 #define BMP_SCL_PIN		GPIO_PIN_8
 
 
@@ -50,10 +50,6 @@
 
 #define BMP_TEMP 	0
 #define BMP_PRRESS	1
-
-#define TESTTTT 1
-#define TESTTTT 2
-#define TESTTTT 3
 
 
 typedef enum BMP180_comm_state {
@@ -99,6 +95,7 @@ typedef struct BMP180_info {
 	 uint8_t pressure_f;
 
 	 uint8_t step;
+	 uint8_t binit;
 
 }t_BMP180_info;
 

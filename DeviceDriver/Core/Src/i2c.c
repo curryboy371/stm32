@@ -62,7 +62,7 @@ void I2C_set_pull_config(t_I2C_gpio_info* pI2C_gpio) {
 			*reg_pupdr &= ~mask;
 			*reg_pupdr |= (0x02 << (pin_pos*2));
 
-			I2C_set_gpio_odr(pI2C_gpio, HIGH);
+			I2C_set_gpio_odr(pI2C_gpio, LOW);
 		break;
 
 
@@ -129,7 +129,7 @@ void I2C_set_gpio_odr(t_I2C_gpio_info* pI2C_gpio, uint8_t state) {
 uint8_t I2C_get_gpio_idr(t_I2C_gpio_info* pI2C_gpio) {
 
 	if(!pI2C_gpio) {
-		return;
+		return LOW;
 	}
 
     volatile uint32_t* reg_idr = (uint32_t*)((uint32_t)pI2C_gpio->gpio_port + DMA_IDR);

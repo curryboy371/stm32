@@ -123,8 +123,7 @@ void init_system();
 #define COL3_KEYPAD_GPIO_Port GPIOC
 #define COL4_KEYPAD_Pin GPIO_PIN_11
 #define COL4_KEYPAD_GPIO_Port GPIOC
-#define BMP_SDA_Pin GPIO_PIN_4
-#define BMP_SDA_GPIO_Port GPIOB
+
 
 /* USER CODE BEGIN Private defines */
 

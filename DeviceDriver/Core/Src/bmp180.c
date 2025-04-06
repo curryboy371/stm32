@@ -42,8 +42,8 @@ void bmp180_init() {
 	scl_info->pull_config = I2C_PULL_UP;
 
 
-	sda_info->gpio_port = (uint32_t*)DMA_GPIOB_BASE;
-	sda_info->gpio_pin = GPIO_PIN_4;
+	sda_info->gpio_port = (uint32_t*)DMA_GPIOA_BASE;
+	sda_info->gpio_pin = GPIO_PIN_7;
 	sda_info->gpio_mode = I2C_MODE_OUTPUT;
 	sda_info->pull_config = I2C_PULL_UP;
 
@@ -88,6 +88,7 @@ void bmp180_init() {
 
 		state = bmp180_read_calib_table();
 		if(state == I2C_COMM_STATE_OK){
+			BMP_info.binit = TRUE;
 			break;
 		}
 
@@ -188,6 +189,7 @@ t_I2C_COMM_state bmp180_read_temperature() {
 	if(bmp180_wait() == FALSE) {
 		return bmp180_tx_temperature();
 	}
+	return state;
 }
 
 t_I2C_COMM_state bmp180_tx_temperature() {
@@ -282,6 +284,8 @@ t_I2C_COMM_state bmp180_read_pressure() {
 	if(bmp180_wait() == FALSE) {
 		return bmp180_tx_pressure();
 	}
+
+	return state;
 }
 
 t_I2C_COMM_state bmp180_tx_pressure() {
