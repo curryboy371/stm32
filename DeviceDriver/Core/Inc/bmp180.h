@@ -10,6 +10,9 @@
 
 #include "main.h"
 #include "def.h"
+#include "i2c.h"
+
+
 
 // slave address
 #define BMP180_ADDR  0x77
@@ -106,19 +109,18 @@ long calc_pressure(long up);
 void bmp180_run();
 
 void bmp180_start();
-void bmp180_restart();
 void bmp180_stop();
 
-t_commu_state bmp180_tx(uint8_t value);
-t_commu_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm);
+t_I2C_COMM_state bmp180_tx(uint8_t value);
+t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm);
 
-t_commu_state bmp180_acks();
+t_I2C_COMM_state bmp180_acks();
 
 void bmp180_ackm(uint8_t in_ackm);
 
 void bmp180_clock();
 
-void bmp180_set_sda_mode(uint8_t inMode);
+void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode);
 
 
 #endif /* INC_BMP180_H_ */

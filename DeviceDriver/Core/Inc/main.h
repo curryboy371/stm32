@@ -39,10 +39,11 @@ extern "C" {
 //#define USE_HAL
 //#define USE_STRUCT
 
-#define ACCESS_MODE USE_STRUCT
+#define ACCESS_MODE USE_DMA
 
 #define USE_HAL 	1
 #define USE_CONST 	2
+#define USE_DMA 	2
 #define USE_STRUCT 	3
 /* USER CODE END ET */
 

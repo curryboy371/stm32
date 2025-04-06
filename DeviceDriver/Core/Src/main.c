@@ -76,7 +76,9 @@ const osThreadAttr_t myTask03_attributes = {
 
 uint8_t rx_data; // uart2 rx byte
 
+
 volatile int TIM11_1ms_counter;
+
 volatile int TIM11_keypad_scan_timer = 0;
 /* USER CODE END PV */
 
@@ -717,6 +719,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM11)
   {
+	  TIM11_1ms_tick++;
+
 	  TIM11_1ms_counter++;
 	  TIM11_keypad_scan_timer++;
 

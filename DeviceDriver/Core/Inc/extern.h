@@ -16,6 +16,7 @@ extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim5;
 extern volatile int TIM10_servo_motor_counter;
 extern volatile int TIM11_1ms_counter;
+extern volatile uint32_t TIM11_1ms_tick;
 
 // uart
 extern UART_HandleTypeDef huart2;

@@ -9,6 +9,8 @@
 #include "timer.h"
 #include "extern.h"
 
+volatile uint32_t TIM11_1ms_tick;
+
 // 1MHz의 주파수가 TIM2에 공급
 // T=1/f 1/1,000,000Hz ==> 0.000001sec ( 1us) 1개의 pulse 소요 시간
 // 1us * 1000 ==> 1ms
@@ -43,5 +45,10 @@ void delay_ms(int ms) {
 	while(__HAL_TIM_GET_COUNTER(&htim2) < ms * 1000) {
 		;
 	}
+}
+
+uint32_t get_tick() {
+
+	return TIM11_1ms_tick;
 }
 

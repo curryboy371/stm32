@@ -13,4 +13,6 @@
 void delay_us(int us);
 void delay_ms(int ms);
 
+uint32_t get_tick();
+
 #endif /* INC_TIMER_H_ */

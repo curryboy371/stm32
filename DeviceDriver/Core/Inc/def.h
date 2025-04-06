@@ -54,13 +54,18 @@ typedef enum {
 #define DMA_GPIOA_BASE  0x40020000
 #define DMA_GPIOB_BASE  0x40020400
 
-#define GPIOA_MODE  	(unsigned int*)DMA_GPIOA_BASE
-#define GPIOA_IDR  		(unsigned int*)(DMA_GPIOA_BASE + 0x10)
-#define GPIOA_ODR  		(unsigned int*)(DMA_GPIOA_BASE + 0x14)
-#define GPIO_PUPDR  	(unsigned int*)0x4002080C
+#define DMA_IDR 0x10
+#define DMA_ODR 0x14
+#define DMA_PUPDR 0x0c
+#define DMA_MODE 0x00
 
-#define GPIOB_IDR  		(unsigned int*)(DMA_GPIOB_BASE + 0x10)
-#define GPIOB_ODR  		(unsigned int*)(DMA_GPIOB_BASE + 0x14)
+#define GPIOA_MODE  	(unsigned int*)(DMA_GPIOA_BASE + DMA_MODE)
+#define GPIOA_IDR  		(unsigned int*)(DMA_GPIOA_BASE + DMA_IDR)
+#define GPIOA_ODR  		(unsigned int*)(DMA_GPIOA_BASE + DMA_ODR)
+#define GPIO_PUPDR  	(unsigned int*)(DMA_GPIOA_BASE + DMA_PUPDR)
+
+#define GPIOB_IDR  		(unsigned int*)(DMA_GPIOB_BASE + DMA_IDR)
+#define GPIOB_ODR  		(unsigned int*)(DMA_GPIOB_BASE + DMA_ODR)
 
 
 #endif /* INC_DEF_H_ */
