@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "def.h"
 #include "extern.h"
+
+#include "devicedriver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -172,10 +174,12 @@ int main(void)
 //  keypadInit();
 
   //bmp180_init();
+  dd_init();
 
+  dd_run();
 
   //bmp180_run();
-  lcd1602_main();
+
   //run_animation();
   //button_init();
 
@@ -239,7 +243,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  dd_update();
+	  dd_render();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -571,11 +576,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, DHT11_Pin|LD2_Pin|BMP_SCL_Pin|CE_DS1302_Pin
-                          |IO_DS1302_Pin|CLK_DS1302_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DHT11_Pin|LD2_Pin|BMP_SDA_Pin|BMP_SCL_Pin
+                          |CE_DS1302_Pin|IO_DS1302_Pin|CLK_DS1302_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, CLK_74HC595_Pin|LATCH_74HC595_Pin|SER_74HC595_Pin|BMP_SDA_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|CLK_74HC595_Pin|LATCH_74HC595_Pin
+                          |SER_74HC595_Pin|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6
+                          |GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, COL1_KEYPAD_Pin|COL2_KEYPAD_Pin|COL3_KEYPAD_Pin|COL4_KEYPAD_Pin, GPIO_PIN_RESET);
@@ -601,14 +608,25 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : BMP_SDA_Pin BMP_SCL_Pin */
+  GPIO_InitStruct.Pin = BMP_SDA_Pin|BMP_SCL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pins : ROW1_KEYPAD_Pin ROW2_KEYPAD_Pin ROW3_KEYPAD_Pin ROW4_KEYPAD_Pin */
   GPIO_InitStruct.Pin = ROW1_KEYPAD_Pin|ROW2_KEYPAD_Pin|ROW3_KEYPAD_Pin|ROW4_KEYPAD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CLK_74HC595_Pin LATCH_74HC595_Pin SER_74HC595_Pin */
-  GPIO_InitStruct.Pin = CLK_74HC595_Pin|LATCH_74HC595_Pin|SER_74HC595_Pin;
+  /*Configure GPIO pins : PB0 PB1 CLK_74HC595_Pin LATCH_74HC595_Pin
+                           SER_74HC595_Pin PB4 PB5 PB6
+                           PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|CLK_74HC595_Pin|LATCH_74HC595_Pin
+                          |SER_74HC595_Pin|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6
+                          |GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -620,20 +638,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : BMP_SCL_Pin */
-  GPIO_InitStruct.Pin = BMP_SCL_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(BMP_SCL_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : BMP_SDA_Pin */
-  GPIO_InitStruct.Pin = BMP_SDA_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(BMP_SDA_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

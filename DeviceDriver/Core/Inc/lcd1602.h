@@ -16,3 +16,13 @@
 
 #define SET         	1
 #define RESET          	0
+
+void lcd1602_main(void);
+void lcd1602_init(void);
+void lcd1602_data(uint8_t data);
+void Write_Data_to_DDRAM(uint8_t nibble);
+void pulse_enable(void);
+void Set_RS(uint8_t rs);
+void lcd1602_move_cursor(uint8_t row, uint8_t column);
+
+void lcd1602_string(char* pstr);

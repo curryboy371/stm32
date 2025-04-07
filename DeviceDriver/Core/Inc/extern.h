@@ -41,8 +41,5 @@ extern void flash_main();
 extern void flash_set_time(uint8_t* pData, uint32_t size);
 extern void flash_write_time(uint8_t* pData, uint32_t size);
 
-//lcd
-extern void lcd1602_main(void);
-extern void lcd1602_init(void);
 
 #endif /* INC_EXTERN_H_ */

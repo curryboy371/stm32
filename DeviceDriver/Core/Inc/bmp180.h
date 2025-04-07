@@ -28,11 +28,6 @@
 #define ID			0xD0	// ro
 
 
-#define BMP_SCL_PORT	GPIOA
-#define BMP_SDA_PORT	GPIOA
-#define BMP_SDA_PIN 	GPIO_PIN_7
-#define BMP_SCL_PIN		GPIO_PIN_8
-
 
 #define BMP_MSB 	0
 #define BMP_LSB 	1
@@ -43,10 +38,7 @@
 #define MAX_OSS			4
 #define BMP_CALIB_LEN 	11
 #define BMP_RETRY_COUNT	5
-
-
-#define I2C_ACK		0
-#define I2C_NACK	1
+#define BMP_UPDATE_TURM 2000 //ms
 
 #define BMP_TEMP 	0
 #define BMP_PRRESS	1
@@ -96,11 +88,13 @@ typedef struct BMP180_info {
 
 	 uint8_t step;
 	 uint8_t binit;
+	 uint8_t update_value;
 
 }t_BMP180_info;
 
 void bmp180_init();
-t_I2C_COMM_state bmp180_scan();
+void bmp180_update();
+
 t_I2C_COMM_state bmp180_read_calib_table();
 void bmp180_make_calib_table(uint8_t calib_datas[]);
 
@@ -114,21 +108,16 @@ t_I2C_COMM_state bmp180_rx_pressure();
 
 long calc_temperature(long ut);
 long calc_pressure(long up);
-
-void bmp180_run();
-void bmp180_start();
-void bmp180_stop();
+;
 
 void bmp180_print_msg(const char* msg, t_I2C_COMM_state res_state);
 
-t_I2C_COMM_state bmp180_tx(uint8_t value);
-t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm);
+uint8_t bmp180_get_update_value();
+void bmp180_set_update_value(uint8_t value);
 
-t_I2C_COMM_state bmp180_acks();
 
-void bmp180_ackm(uint8_t in_ackm);
-void bmp180_clock();
-void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode);
+const t_BMP180_info* bmp180_get_info();
+
 
 uint8_t bmp180_wait();
 

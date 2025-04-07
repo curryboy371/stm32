@@ -89,6 +89,8 @@ void init_system();
 #define LD2_GPIO_Port GPIOA
 #define BUZZER_Pin GPIO_PIN_6
 #define BUZZER_GPIO_Port GPIOA
+#define BMP_SDA_Pin GPIO_PIN_7
+#define BMP_SDA_GPIO_Port GPIOA
 #define ROW1_KEYPAD_Pin GPIO_PIN_4
 #define ROW1_KEYPAD_GPIO_Port GPIOC
 #define ROW2_KEYPAD_Pin GPIO_PIN_5
@@ -123,7 +125,6 @@ void init_system();
 #define COL3_KEYPAD_GPIO_Port GPIOC
 #define COL4_KEYPAD_Pin GPIO_PIN_11
 #define COL4_KEYPAD_GPIO_Port GPIOC
-
 
 /* USER CODE BEGIN Private defines */
 

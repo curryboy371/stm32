@@ -30,9 +30,6 @@ void bmp180_init() {
 
 	HAL_Delay(100);
 
-
-#if ACCESS_MODE == USE_DMA
-
 	t_I2C_gpio_info* scl_info = &I2C_setting.gpio_infos[I2C_SCL];
 	t_I2C_gpio_info* sda_info = &I2C_setting.gpio_infos[I2C_SDA];
 
@@ -57,10 +54,7 @@ void bmp180_init() {
 	I2C_setting.comm_step = I2C_COMM_STEP_WAIT;
 
 	I2C_init(&I2C_setting);
-#else
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, SET);
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, SET);
-#endif
+
 
 	BMP_state = BMP_STATE_IDLE;
 
@@ -98,38 +92,42 @@ void bmp180_init() {
 	}
 }
 
+void bmp180_update() {
 
-t_I2C_COMM_state bmp180_scan() {
-
-	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
-	BMP_state = BMP_STATE_SCAN;
-
-#if ACCESS_MODE == USE_DMA
-	state = I2C_scan(&I2C_setting, BMP_ADDR_W);
-
-	if(state != I2C_COMM_STATE_OK) {
-		return state;
+	if(!BMP_info.binit) {
+		return;
 	}
 
-#else
-	bmp180_start();
+	if(bmp_timer > 0 ){
+		return;
+	}
 
-	commu_state = bmp180_tx(BMP_ADDR_W);
-    if(commu_state != COMMU_OK) {
-		bmp180_stop();
-		printf("timeout\r\n");
-    	return commu_state;
-    }
+	t_I2C_COMM_state state = I2C_COMM_STATE_OK;
 
-    bmp180_stop();
-	printf("finish scan \r\n");
+	state = bmp180_rx_temperature();
+	if(state != I2C_COMM_STATE_OK) {
+		bmp180_print_msg("rx temp err", state);
+	}
 
-	return commu_state;
-#endif
+	state = bmp180_rx_pressure();
+	if(state != I2C_COMM_STATE_OK) {
+		bmp180_print_msg("rx press err", state);
+	}
 
-	return state;
+	if(BMP_info.step == BMP_TEMP) {
+		state = bmp180_read_temperature();
+		if(state != I2C_COMM_STATE_OK) {
+			bmp180_print_msg("read temp err", state);
+		}
+	}
+	else {
+		state = bmp180_read_pressure();
+		if(state != I2C_COMM_STATE_OK) {
+			bmp180_print_msg("read press err", state);
+		}
+	}
+
 }
-
 
 t_I2C_COMM_state bmp180_read_calib_table() {
 
@@ -269,6 +267,8 @@ t_I2C_COMM_state bmp180_rx_temperature() {
 	BMP_info.temper_f = temperature % 10;
 	BMP_info.step = BMP_PRRESS;
 	printf("ut:%ld t:%ld.%d \r\n", uncomp_temperature, BMP_info.temper, BMP_info.temper_f);
+
+	bmp_timer = BMP_UPDATE_TURM;
 	return state;
 
 }
@@ -383,6 +383,9 @@ t_I2C_COMM_state bmp180_rx_pressure() {
 	BMP_info.pressure_f = pressure % 100;
 	printf("up:%ld p:%ld.%d \r\n", uncomp_pressure, BMP_info.pressure, BMP_info.pressure_f);
 
+	bmp_timer = BMP_UPDATE_TURM;
+
+	BMP_info.update_value = true;
 	return state;
 
 }
@@ -501,258 +504,34 @@ void bmp180_run() {
 }
 
 
-void bmp180_start() {
 
-#if ACCESS_MODE == USE_DMA
-	I2C_start(&I2C_setting);
-
-#else
-
-	bmp180_set_sda_mode(DEF_MODE_OUTPUT);
-
-	//	SCL 이 HIGH 상태일 때
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, SET);
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, SET);
-
-	//	SDA가 하강 하면서 시작
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, RESET);
-
-	// SCL이 상승에서 데이터를 받도록 클럭은 하강 상태에서 시작
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, RESET);
-
-#endif
-
-}
-
-
-void bmp180_stop() {
-
-#if ACCESS_MODE == USE_DMA
-	I2C_stop(&I2C_setting);
-
-#else
-
-	bmp180_set_sda_mode(DEF_MODE_OUTPUT);
-
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, RESET);
-
-	//	SCL 이 HIGH 상태일 때
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, SET);
-
-	//	SDA가 HIGH로 하여 STOP
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, SET);
-
-#endif
-
-
-}
 
 void bmp180_print_msg(const char* msg, t_I2C_COMM_state res_state) {
 
 	printf("%d %s bmp:%d i2c:%d\r\n", res_state, msg, BMP_state, I2C_setting.comm_step);
 }
 
-t_I2C_COMM_state bmp180_tx(uint8_t value) {
 
-#if ACCESS_MODE == USE_DMA
-
-	t_I2C_COMM_state comm_state = I2C_COMM_STATE_OK;
-
-	comm_state = I2C_transmit_byte(&I2C_setting, value);
-	if(comm_state != I2C_COMM_STATE_OK) {
-		return comm_state;
-	}
-
-	comm_state = I2C_ack_slave(&I2C_setting);
-	if(comm_state != I2C_COMM_STATE_OK) {
-		return comm_state;
-	}
-
-
-
-#else
-	// output mode 설정
-	bmp180_set_sda_mode(DEF_MODE_OUTPUT);
-
-	// send data
-	// msb to lsb
-	for(int i = 7; i >= 0; --i){
-
-		if(value & (1 << i)) {
-			HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, SET);
-		}
-		else {
-			HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, RESET);
-		}
-
-		bmp180_clock();
-	}
-
-	return bmp180_acks();
-#endif
-
-	return comm_state;
-
-}
-
-
-
-t_I2C_COMM_state bmp180_rx(uint8_t* out_value, uint8_t in_ackm) {
-
-#if ACCESS_MODE == USE_DMA
-	t_I2C_COMM_state comm_state = I2C_COMM_STATE_OK;
-
-	comm_state = I2C_receive_byte(&I2C_setting, out_value);
-	if(comm_state != I2C_COMM_STATE_OK) {
-		return comm_state;
-	}
-
-
-	comm_state = I2C_ack_master(&I2C_setting, in_ackm);
-	if(comm_state != I2C_COMM_STATE_OK) {
-		return comm_state;
-	}
-
-	return comm_state;
-#else
-	bmp180_set_sda_mode(DEF_MODE_INPUT);
-
-	// send data
-	// msb ? lsb?
-
-	*out_value = 0;
-
-	for(int i = 7; i >= 0; --i){
-
-		if(HAL_GPIO_ReadPin(BMP_SDA_PORT, BMP_SDA_PIN)) {
-
-			*out_value |= 1 << i;
-		}
-
-		bmp180_clock();
-	}
-
-	// check data
-
-	// ack m
-
-	bmp180_ackm(in_ackm);
-#endif
-
-
-	return comm_state;
-}
-
-// ack of slave
-t_I2C_COMM_state bmp180_acks() {
-
-#if ACCESS_MODE == USE_DMA
-
-	return I2C_ack_slave(&I2C_setting);
-
-
-#else
-	bmp180_set_sda_mode(DEF_MODE_INPUT);
-
-	// 이렇게 클럭을 치고 받으면 안됨
-	//bmp180_clock();
-
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, SET);
-
-	// ack ( 0)
-	uint32_t start = HAL_GetTick();
-	while(HAL_GPIO_ReadPin(BMP_SDA_PORT, BMP_SDA_PIN)) {
-
-		delay_us(10);
-		uint32_t now = HAL_GetTick();
-		if(now - start > I2C_TIMEOUT) {
-			return I2C_COMM_STATE_TIMEOUT;
-		}
-	}
-
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, RESET);
-#endif
-
-
-
-
-
-
-	return I2C_COMM_STATE_OK;
-
-}
-
-// ack of master
-void bmp180_ackm(uint8_t in_ackm) {
-
-#if ACCESS_MODE == USE_DMA
-	I2C_ack_master(&I2C_setting, in_ackm);
-
-#else
-	bmp180_set_sda_mode(DEF_MODE_OUTPUT);
-
-	ITStatus pin_state = in_ackm ? SET : RESET;
-	HAL_GPIO_WritePin(BMP_SDA_PORT, BMP_SDA_PIN, pin_state);
-	bmp180_clock();
-#endif
-
-
-
-}
-
-void bmp180_clock() {
-
-	// start에서 clock이 하강 상태에서 시작하므로
-	// h to l
-#if ACCESS_MODE == USE_DMA
-	I2C_clock_tick(&I2C_setting.gpio_infos[I2C_SCL], I2C_setting.sampling_type);
-
-#else
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, SET);
-	HAL_GPIO_WritePin(BMP_SCL_PORT, BMP_SCL_PIN, RESET);
-#endif
-
-}
-
-void bmp180_set_sda_mode(t_I2C_gpio_mode gpio_mode) {
-
-	// input으로 설정시 내부적으로 pull config에 따라 odr을 변경함
-#if ACCESS_MODE == USE_DMA
-	I2C_setting.gpio_infos[I2C_SDA].gpio_mode = gpio_mode;
-	I2C_set_gpio_mode(&I2C_setting.gpio_infos[I2C_SDA]);
-
-#else
-
-	GPIO_InitTypeDef GPIO_InitStruct = {0};  // 초기화 구조체
-	__HAL_RCC_GPIOB_CLK_ENABLE();  // 포트 클럭 인가 (필수)
-
-	GPIO_InitStruct.Pin = BMP_SDA_PIN;
-
-	if(gpio_mode == I2C_MODE_OUTPUT) {
-		// output 설정
-		GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;  // 출력, Push-Pull
-		GPIO_InitStruct.Pull = GPIO_NOPULL;
-		GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	}
-	else {
-
-		// input 설정
-		GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-		GPIO_InitStruct.Pull = GPIO_PULLUP;
-	}
-
-	HAL_GPIO_Init(BMP_SDA_PORT, &GPIO_InitStruct);
-
-#endif
-
-
-}
 
 uint8_t bmp180_wait() {
 
 	return (BMP_state == BMP_STATE_READ_TEMPERATURE_WAIT ||  BMP_state == BMP_STATE_READ_TEMPERATURE_WAIT);
 }
 
+uint8_t bmp180_get_update_value() {
+
+	return BMP_info.update_value;
+}
+
+void bmp180_set_update_value(uint8_t value) {
+
+	BMP_info.update_value = value;
+}
+
+const t_BMP180_info* bmp180_get_info() {
+
+	return &BMP_info;
+}
 
 
 

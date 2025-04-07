@@ -2,15 +2,6 @@
 
 #include "extern.h"
 #include "timer.h"
-void lcd1602_main(void);
-void lcd1602_init(void);
-void lcd1602_data(uint8_t data);
-void Write_Data_to_DDRAM(uint8_t nibble);
-void pulse_enable(void);
-void Set_RS(uint8_t rs);
-void lcd1602_move_cursor(uint8_t row, uint8_t column);
-
-void lcd1602_string(char* pstr);
 
 void lcd1602_main(void)
 {
@@ -20,7 +11,7 @@ void lcd1602_main(void)
    while(1)
    {
       lcd1602_move_cursor(0,0);
-      lcd1602_string("kh!");
+      lcd1602_string("aaa");
 
       HAL_Delay(500);
    }
