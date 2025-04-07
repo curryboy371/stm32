@@ -185,8 +185,6 @@ void render_dotmatrix(uint8_t inCurMode) {
 		}
 
 		if(inCurMode == NAME_ANI) {
-
-
 			// 옆으로
 			for (int i=0; i < 8; i++)
 			{
@@ -195,7 +193,6 @@ void render_dotmatrix(uint8_t inCurMode) {
 			}
 		}
 		else if(inCurMode == UP_ARROW_ANI) {
-
 			// 위로
 			for(int i = 0; i < 8-(count); ++i) {
 
@@ -205,7 +202,6 @@ void render_dotmatrix(uint8_t inCurMode) {
 			for(int i = 0; i < count; ++i) {
 				display_data[7-i] = scroll_buffer[nextIdx][count-i];
 			}
-
 		}
 		else if(inCurMode == DOWN_ARROW_ANI) {
 

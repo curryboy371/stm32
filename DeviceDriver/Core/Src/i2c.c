@@ -367,7 +367,10 @@ void I2C_start(t_I2C_settings* pI2C_setting) {
     I2C_set_gpio_odr(pI2C_sda, HIGH);
     I2C_set_gpio_odr(pI2C_scl, HIGH);
 
+    // setup, hold time 추가
+    delay_us(3);
     I2C_set_gpio_odr(pI2C_sda, LOW);
+    delay_us(3);
 
 	// SCL이 상승에서 데이터를 받도록 클럭은 하강 상태에서 시작
     I2C_set_gpio_odr(pI2C_scl, LOW);
@@ -396,10 +399,14 @@ void I2C_stop(t_I2C_settings* pI2C_setting) {
 	// sda를 확실히 high 상태로 두기위해 low처리
     I2C_set_gpio_odr(pI2C_sda, LOW);
 
+
+    // setup, hold time 추가
+    delay_us(3);
+
 	//	SCL 이 HIGH 상태일 때 SDA를 HIGH로 변경하여 STOP
     I2C_set_gpio_odr(pI2C_scl, HIGH);
     I2C_set_gpio_odr(pI2C_sda, HIGH);
-
+    delay_us(3);
 }
 
 t_I2C_COMM_state I2C_transmit_byte(t_I2C_settings* pI2C_setting, uint8_t tx_data) {
@@ -416,22 +423,31 @@ t_I2C_COMM_state I2C_transmit_byte(t_I2C_settings* pI2C_setting, uint8_t tx_data
 	pI2C_sda->gpio_mode = I2C_MODE_OUTPUT;
 	I2C_set_gpio_mode(pI2C_sda);
 
+
+
 	// bit order에 맞춰 I2C data write
 	if(pI2C_setting->bit_order == I2C_MSB_FIRST) {
 
 		// MSB to LSB
 		for(uint8_t i = 0; i < 8; ++i) {
 
+		    // setup time
+		    delay_us(3);
+
 			uint8_t v = (tx_data & 0x80) >> 7;
 			I2C_set_gpio_odr(pI2C_sda, v);
 			tx_data <<= 0x01;
 
 			I2C_clock_tick(&pI2C_setting->gpio_infos[I2C_SCL], pI2C_setting->sampling_type);
+
 		}
 	}
 	else {
 		// LSB to MSB
 		for(uint8_t i = 0; i < 8; ++i) {
+
+		    // setup time
+		    delay_us(3);
 
 			uint8_t v = tx_data & 0x01;
 			I2C_set_gpio_odr(pI2C_sda, v);
@@ -466,17 +482,26 @@ t_I2C_COMM_state I2C_receive_byte(t_I2C_settings* pI2C_setting, uint8_t* out_rx_
 
 		for(int i = 7; i >= 0; --i){
 
+		    // setup time 이부분은 필요 없을듯
+			// slave의 책임
+		    //delay_us(3);
+
 			if(I2C_get_gpio_idr(pI2C_sda)) {
 
 				*out_rx_data |= 1 << i;
 			}
 			I2C_clock_tick(&pI2C_setting->gpio_infos[I2C_SCL], pI2C_setting->sampling_type);
+
 		}
 
 	}
 	else {
 
 		for(int i = 0; i < 8; ++i){
+
+		    // setup time 이부분은 필요 없을듯
+			// slave의 책임
+		    //delay_us(3);
 
 			if(I2C_get_gpio_idr(pI2C_sda)) {
 
@@ -505,9 +530,12 @@ t_I2C_COMM_state I2C_ack_master(t_I2C_settings* pI2C_setting, uint8_t ack_settin
 	pI2C_sda->gpio_mode = I2C_MODE_OUTPUT;
 	I2C_set_gpio_mode(pI2C_sda);
 
+    // setup time
+    delay_us(3);
 
 	// ack or nack
 	I2C_set_gpio_odr(pI2C_sda, ack_setting);
+
 
 	// clock tick
 	I2C_clock_tick(&pI2C_setting->gpio_infos[I2C_SCL], pI2C_setting->sampling_type);
@@ -568,7 +596,12 @@ void I2C_clock_tick(t_I2C_gpio_info* pI2C_gpio, t_I2C_sampling_type sampling_typ
 	// low to high로 클럭 tick
 
 	I2C_set_gpio_odr(pI2C_gpio, (uint8_t)sampling_type);
+
 	I2C_set_gpio_odr(pI2C_gpio, (uint8_t)!sampling_type);
+
+
+    // hold time
+    delay_us(3);
 
 }
 
