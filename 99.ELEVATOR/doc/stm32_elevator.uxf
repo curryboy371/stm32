@@ -1,0 +1,226 @@
+<diagram program="umletino" version="15.1"><zoom_level>10</zoom_level><help_text>Space for diagram notes</help_text><element><id>UMLClass</id><coordinates><x>2250</x><y>1280</y><w>260</w><h>180</h></coordinates><panel_attributes>elevator
+--
+- t_elv_info
+ - cur_move_dir:  t_elv_dir
+ - pre_floor:  t_elv_floor
+ - cur_floor:  t_elv_floor
+ - obj_floor:  t_elv_floor
+--
++ elevator_init(): void
++ elevator_run(): void    
++ elevator_tick(): void    
++ elevator_update(): void      
+--
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3200</x><y>160</y><w>210</w><h>110</h></coordinates><panel_attributes>stepmotor
+--
+
+--
++ stepmotor_run(): void
++ set_rpm(int rpm): void    
++ stepmotor_drive(int direction): void    
+--
+
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3070</x><y>1850</y><w>360</w><h>170</h></coordinates><panel_attributes>i2c_lcd
+--
+
+--
++ i2c_lcd_init: void
++ lcd_command(uint8_t command): t_I2C_COMM_state
++ lcd_data(uint8_t data): t_I2C_COMM_state
+--
+
+group=group-5</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3730</x><y>1770</y><w>380</w><h>530</h></coordinates><panel_attributes>i2c
+--
+- I2C_gpio_info
+ - gpio_port: uint32*
+ - gpio_pin: uint16_t
+ - gpio_mode: I2C_gpio_mode
+ - pull_config: I2C_gpio_pull
+
+- I2C_settings
+ - gpio_infos: t_I2C_gpio_info[]     
+ - comm_step: t_I2C_COMM_step        
+ - sampling_type: t_I2C_sampling_type
+ - timeout_ms: uint32_t              
+ - bit_order: I2C_bit_order          
+ - ack: uint8_t                      
+
+--
+ + I2C_init(p: t_I2C_settings*): void 
+ + I2C_set_pull_config(p: t_I2C_gpio_info*): void 
+ + I2C_set_gpio_mode(p: t_I2C_gpio_info*): void 
+ + I2C_set_gpio_odr(p: t_I2C_gpio_info*, state: uint8_t): void
+ + I2C_get_gpio_idr(p: t_I2C_gpio_info*): uint8_t 
+ + I2C_get_pin_num(gpio_pin: uint16_t): uint8_t 
+ + I2C_scan(...): t_I2C_COMM_state
+ + I2C_read(...): t_I2C_COMM_state
+ + I2C_write(...): t_I2C_COMM_state
+
+ + I2C_start(p: t_I2C_settings*): void
+ + I2C_stop(p: t_I2C_settings*): void
+ + I2C_transmit_byte(...): t_I2C_COMM_state
+ + I2C_receive_byte(...): t_I2C_COMM_state
+ + I2C_ack_master(...): t_I2C_COMM_state
+ + I2C_ack_slave(...): t_I2C_COMM_state
+ + I2C_clock_tick(...): void
+--
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3400</x><y>300</y><w>320</w><h>460</h></coordinates><panel_attributes>ds1302
+--
+- t_ds1302
+ - year: uint8_t
+ - month: uint8_t
+ - date: uint8_t
+ - dayofweek: uint8_t
+ - hours: uint8_t
+ - minutes: uint8_t
+ - seconds: uint8_t
+ - ampm: uint8_t
+ - hourmode: uint8_t
+--
+init_ds1302(): void
+init_date_time(t_ds1302* pds1302): void
+init_gpio_ds1302(): void
+
+ds1302_update(): void
+read_time_ds1302(t_ds1302* pds1302): void
+read_date_ds1302(t_ds1302* pds1302): void
+
+read_ds1302(uint8_t addr): uint8_t 
+write_ds1302(uint8_t addr, uint8_t data): void
+rx_ds1302(unsigned char* pdata): void
+tx_ds1302(uint8_t value): void
+clock_ds1302(): void
+
+bcd2dec(uint8_t bcd): void
+dec2bcd(uint8_t dec): void
+--
+
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2940</x><y>160</y><w>210</w><h>90</h></coordinates><panel_attributes>button
+--
+
+--
++ button_init(): void
++ get_button(...): int
+--
+
+
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2930</x><y>300</y><w>450</w><h>440</h></coordinates><panel_attributes>buzzer
+--
+- t_buzzer_play_info
+ - frequency: int
+ - play_delay: uint16_t
+
+buzzer_play_queue[BUZZER_PLAY_QUEUE_SIZE]: t_buzzer_play_info
+buzzer_play_front: int
+buzzer_play_rear: int
+
+--
++ buzzer_init(): void
++ buzzer_update: void
++ buzzer_welcom_play(): void
++ buzzer_on_button(): void
++ buzzer_off_button(): void
+
++ buzzer_is_full_queue(): uint8_t
++ buzzer_is_empty_queue(): uint8_t 
+
++ buzzer_pop_queue(): t_buzzer_play_info 
++ buzzer_push_queue(const t_buzzer_play_info* play_info): void
++ buzzer_push_queue_multi(... ): void
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3700</x><y>1240</y><w>380</w><h>160</h></coordinates><panel_attributes>spi
+--
+- spi_gpio_setting
+ - gpio_port[SPI_PIN_MAX]: GPIO_TypeDef*
+ - gpio_pin[SPI_PIN_MAX]:  uint16_t
+--
+ + spi_init(...);  void
+ + spi_clock(...);  void
+ + spi_tx_data(...);  void
+ + spi_letch(...);  void
+--
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLUseCase</id><coordinates><x>2730</x><y>40</y><w>1140</w><h>850</h></coordinates><panel_attributes>lt=.
+
+
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3060</x><y>1180</y><w>360</w><h>210</h></coordinates><panel_attributes>dotmatrix
+
+--
+- dotmarix_info
+ - cur index:  t_dotmatrix_info
+ - next index:  t_dotmatrix_info
+
+--
++ init_dotmatrix_pin(): void
++ init_dotmatrix(uint8_t inCurMode): void
++ render_dotmatrix(): void
++ dotmatrix_refresh_idx(uint8_t cur_idx, uint8_t next_idx): void
+--
+
+group=group-4</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3060</x><y>1410</y><w>330</w><h>190</h></coordinates><panel_attributes>fnd
+
+--
+
+--
++ fnd_init():  void
+
++ fnd_render(uint8_t dir, uint8_t cur_floor):  void
++ fnd_stop_render(t_FND_digit select_digit): void
++ fnd_move_render(...): void
+
++ fnd_set_digit_port(t_FND_digit select_digit): void
++ fnd_get_digit_num(uint8_t num):  void
+--
+
+group=group-4</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3060</x><y>1040</y><w>270</w><h>120</h></coordinates><panel_attributes>led
+
+--
+
+--
++ ledbar_init(): void
++ ledbar_render(uint8_t inData): void
+--
+
+group=group-4</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLUseCase</id><coordinates><x>2860</x><y>950</y><w>730</w><h>760</h></coordinates><panel_attributes>lt=.
+
+
+group=group-4</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLUseCase</id><coordinates><x>2870</x><y>1770</y><w>730</w><h>330</h></coordinates><panel_attributes>lt=.
+
+
+group=group-5</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3230</x><y>70</y><w>110</w><h>40</h></coordinates><panel_attributes>lt=.
+normal-module
+group=group-3</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3160</x><y>970</y><w>110</w><h>40</h></coordinates><panel_attributes>lt=.
+spi-module
+
+group=group-4</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3180</x><y>1790</y><w>110</w><h>40</h></coordinates><panel_attributes>lt=.
+i2c module
+
+group=group-5</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>3580</x><y>1240</y><w>140</w><h>100</h></coordinates><panel_attributes>lt=&lt;&lt;-</panel_attributes><additional_attributes>120;10;10;80</additional_attributes></element><element><id>Relation</id><coordinates><x>3570</x><y>1770</y><w>180</w><h>150</h></coordinates><panel_attributes>lt=&lt;&lt;-</panel_attributes><additional_attributes>160;10;10;130</additional_attributes></element><element><id>Relation</id><coordinates><x>2570</x><y>400</y><w>310</w><h>960</h></coordinates><panel_attributes>lt=&lt;-</panel_attributes><additional_attributes>290;940;20;940;10;10</additional_attributes></element><element><id>Relation</id><coordinates><x>2580</x><y>1330</y><w>310</w><h>640</h></coordinates><panel_attributes>lt=&lt;-</panel_attributes><additional_attributes>290;620;10;620;10;10</additional_attributes></element><element><id>Relation</id><coordinates><x>2570</x><y>400</y><w>180</w><h>30</h></coordinates><panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes><additional_attributes>160;10;10;10</additional_attributes></element><element><id>UMLClass</id><coordinates><x>0</x><y>1420</y><w>260</w><h>180</h></coordinates><panel_attributes>elevator
+--
+- t_elv_info
+ - cur_move_dir:  t_elv_dir
+ - pre_floor:  t_elv_floor
+ - cur_floor:  t_elv_floor
+ - obj_floor:  t_elv_floor
+--
++ elevator_init(): void
++ elevator_run(): void    
++ elevator_tick(): void    
++ elevator_update(): void      
+--
+</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>440</x><y>1250</y><w>250</w><h>110</h></coordinates><panel_attributes>normal module
+--
+button
+buzzer
+ds1302
+stepmotor
+
+group=group-7</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>440</x><y>1390</y><w>250</w><h>110</h></coordinates><panel_attributes>i2c module
+--
+lcd1602 i2c
+group=group-7</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>440</x><y>1520</y><w>250</w><h>110</h></coordinates><panel_attributes>spi module
+--
+dotmatrix
+ledbar
+fnd
+group=group-7</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>250</x><y>1420</y><w>110</w><h>30</h></coordinates><panel_attributes>lt=&lt;&lt;-</panel_attributes><additional_attributes>90;10;10;10</additional_attributes></element><element><id>UMLUseCase</id><coordinates><x>340</x><y>1190</y><w>450</w><h>530</h></coordinates><panel_attributes>lt=.
+
+group=group-7</panel_attributes><additional_attributes></additional_attributes></element></diagram>
